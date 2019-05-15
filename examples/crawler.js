@@ -7,6 +7,8 @@ const path = require('path');
 const imageLinkParser = require('./image-link-parser');
 const cssLinkParser = require('./css-link-parser');
 const jsLinkParser = require('./js-link-parser');
+const cssContentParser = require('./css-content-parser');
+const inlineImageParser = require('./inline-image-parser');
 const mkdirp = require('mkdirp');
 
 var crawler = new supercrawler.Crawler({
@@ -33,12 +35,14 @@ crawler.on("handlersError", function (err) {
 });
 
 crawler.addHandler("text/html", supercrawler.handlers.htmlLinkParser({
-  hostnames: ["goalify.plus"]
+  hostnames: ["news.zing.vn"]
 }));
 
 crawler.addHandler("text/html", imageLinkParser());
 crawler.addHandler("text/html", cssLinkParser());
 crawler.addHandler("text/html", jsLinkParser());
+crawler.addHandler("text/html", inlineImageParser());
+crawler.addHandler("text/css", cssContentParser());
 
 const saveFileHandler = (context) => {
   const responseBuffer = context.body;
@@ -86,12 +90,18 @@ const saveFileHandler = (context) => {
 
 crawler.addHandler(["text/plain", "text/html"], saveFileHandler);
 
+crawler.addHandler(["application/font-woff", "application/font-woff2", "font/woff2", "font/woff"], function (context) {
+  console.log("Processed css/javascript" + context.url);
+  console.log("== load font" + context.url);
+  saveFileHandler(context);
+})
+
 crawler.addHandler(['text/css', 'text/javascript', 'application/javascript'], function (context) {
   console.log("Processed css/javascript" + context.url);
   saveFileHandler(context);
 })
 
-crawler.addHandler(['image/png', 'image/jpg', 'image/svg+xml'], function (context) {
+crawler.addHandler(['image/png', 'image/jpg', 'image/jpeg', 'image/svg+xml'], function (context) {
   console.log("Processed image" + context.url);
   saveFileHandler(context);
 })
@@ -102,7 +112,7 @@ crawler.addHandler(function (context) {
 });
 
 crawler.getUrlList().insertIfNotExists(new supercrawler.Url({
-  url: "https://goalify.plus"
+  url: "https://news.zing.vn"
 })).then(function () {
   crawler.start();
 });
